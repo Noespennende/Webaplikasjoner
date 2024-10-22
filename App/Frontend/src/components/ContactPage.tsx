@@ -1,37 +1,18 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {contactMessage} from "../../../Types"
 import ContactInfo from "./ContactInfo"
+import { useMessage } from "../hooks/useMessage"
+import { v4 as uuid } from 'uuid';
 
 
 export default function ContactPage({email} : {email: string}){
+
+    const {status, add, error} = useMessage()
 
     const [person, setPerson] = useState("")
     const [contactEmail, setContactEmail] = useState("")
     const [message, setMessage] = useState("")
     const [formMessage, setFormMessage] = useState("")
-    const [debugMessage, setDebugMessage] = useState()
-    const [contactInfo, setContactInfo] = useState("")
-    const [contactInfoRevealed, setContactInfoRevealed] = useState(false)
-
-    //Post data to server
-    const postMessageDataToServer = async (data) => { 
-        try {
-            const response = await fetch("http://localhost:3999/submitMessage", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-
-            if (!response.ok){
-                console.error(`Post request failed: ${response.status}`)
-            }
-        } 
-        catch (error){
-            console.error("post request failed: " + error)
-        } 
-    }
 
     //Clears all input text from form
     const clearInputText = () => {
@@ -42,7 +23,18 @@ export default function ContactPage({email} : {email: string}){
         inputPerson.value = ""
         inputEmail.value = ""
         inputMessage.value = ""
+    }
 
+    const handleLoading = () => {
+        if (status.posting){
+            setFormMessage("Sending message...")
+            document.getElementById("formmessage").className = "posting"
+        } else if (status.error){
+            setFormMessage(`Ops! noe gikk feil og meldingen ble ikke sendt, men send meg gjerne en mail istede 😄`)
+            document.getElementById("formmessage").className = "error"
+        } else if (status.success) {
+            setFormMessage("Meldingen er motatt!")
+        }
     }
 
      //HandleChange functions to handle form inputs
@@ -62,46 +54,36 @@ export default function ContactPage({email} : {email: string}){
         e.preventDefault()
 
         if(person.length < 3){
-            setFormMessage("'Ditt navn' feltet må ha ett gylding navn")
+            setFormMessage("Ditt navn' feltet må ha ett gylding navn")
         } else if (contactEmail.length < 3 || !contactEmail.includes("@")) {
             setFormMessage("Venligst fyll inn en gyldig epost-adresse i 'Din epost' feltet")
         } else if (message.length < 3){
             setFormMessage("Venligst skriv hva henvendelsen gjelder i 'Din melding' feltet")
         } else {
             const contactMessageInfo: contactMessage = {
+                id: uuid(),
                 person: person,
                 email: contactEmail,
-                message: message
+                message: message,
+                recievedAt: Date.now()
             }
 
-            setDebugMessage(JSON.stringify(contactMessageInfo))
-            setFormMessage("Meldingen er motatt!")
-            postMessageDataToServer(contactMessageInfo)
+            add(contactMessageInfo)
             clearInputText()
-            
-        
         }
     }
 
-    //Handle funksjoner for kontaktinfo
-    const handleContactInfoRevealClick = (e) => {
-        if(!contactInfoRevealed){
-            setContactInfo(<ContactInfo email={email}/>)
-            setContactInfoRevealed(true)
-        } else {
-            setContactInfo("")
-            setContactInfoRevealed(false)
-        }
-    }
+
+    useEffect(() => {
+        handleLoading()
+    },[status.posting, status.error, status.success])
 
 
     return (
         <section id="contactPage">
             <h1>Kontakt meg</h1>
 
-            <button type="button" onClick={handleContactInfoRevealClick}>Se kontakt informasjon</button>
-            {contactInfo}
-            
+            <ContactInfo email={email}/>
             <h2>Eller kontakt meg her:</h2>
             <form onSubmit={handleSubmitt} id="contactForm">
                 <label htmlFor="contactPerson">Ditt navn</label>
@@ -113,9 +95,6 @@ export default function ContactPage({email} : {email: string}){
                 <button type="submit">Send melding</button>
                 <p id="formmessage">{formMessage}</p>
             </form>
-            <pre>
-                {debugMessage}
-            </pre>
         </section>
     )
 }

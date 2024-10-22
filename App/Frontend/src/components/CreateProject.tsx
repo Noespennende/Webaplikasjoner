@@ -1,12 +1,14 @@
-import {  useState } from 'react'
-import { useNavigate } from 'react-router-dom';
+import {  useEffect, useState } from 'react'
+import useProjects from '../hooks/useProjects';
+import { v4 as uuid } from 'uuid';
+import { project } from "../../../Types"
 
 export default function createProject (){
 
-    const redirect = useNavigate();
+    const {add, status, error} = useProjects()
 
     const [formMessage, setFormMessage] = useState("")
-    
+ 
     //States to store form information
     const [header, setHeader] = useState("")
     const [slug, setSlug] = useState("")
@@ -16,29 +18,6 @@ export default function createProject (){
     const [imageAlt, setImageAlt] = useState("")
     const [repository, setRepository] = useState("")
     const [text, setText] = useState("")
-
-    //Post data to server
-    const postJsonDataToServer = async (data) => { 
-
-        try {
-            const response = await fetch("http://localhost:3999/submit", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-
-            if (!response.ok){
-                console.error(`Post request failed: ${response.status}`)
-            } else {
-                redirect("/")
-            }
-        } 
-        catch (error){
-            console.error("post request failed: " + error)
-        } 
-    }
 
     //HandleChange functions to handle form inputs
     const handleHeaderChange = (e) => {
@@ -72,6 +51,19 @@ export default function createProject (){
     const handleTextChange = (e) => {
         e.preventDefault()
         setText(e.target.value)
+    }
+
+    const handleLoading = () => {
+        if (status.posting){
+            setFormMessage("Creating post...")
+            document.getElementById("formmessage").className = "posting"
+        } else if (status.error){
+            setFormMessage(`${error}`)
+            document.getElementById("formmessage").className = "error"
+        } else {
+            setFormMessage("")
+            document.getElementById("formmessage").className = ""
+        }
     }
 
     //Handle form submitt
@@ -113,8 +105,9 @@ export default function createProject (){
             document.getElementById("formmessage").className = ""
             const tagsList = tags.split(" ")
 
-            const projectData = 
+            const projectData: project = 
                 {
+                    id: uuid(),
                     header: header,
                     slug: slug,
                     summary: summary,
@@ -123,19 +116,24 @@ export default function createProject (){
                     imagealt: imageAlt,
                     repository: repository,
                     article: text,
-                    createdAt: Date.now()
+                    createdat: Date.now(),
+                    public: true,
+                    status: "published"
                 }
-                
-            postJsonDataToServer(projectData)
+
+            add(projectData)
         }   
     }
+
+    useEffect(() => {
+        handleLoading()
+    },[status.posting, status.error])
 
 
     return(
         <>
             <section id="createProjectPage">
                 <h1>Opprett en ny artikkel</h1>
-
                 <form onSubmit={handleSubmitt}>
                     <label htmlFor="createHeader">Overskrift</label>
                     <input onChange={handleHeaderChange} type="text" id="createHeader" name="createHeader" placeholder="Overskrift..." required></input>
