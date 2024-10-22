@@ -1,3 +1,5 @@
+import { UUID } from "crypto"
+
 export type involvement = {
   role: string,
   company: string,
@@ -17,6 +19,7 @@ export type person = {
   }
 
   export type project = {
+  id: string,
   header: string
   slug: string
   summary: string
@@ -26,10 +29,24 @@ export type person = {
   repository: string
   article: string
   createdat: number
+  public: boolean,
+  status: "draft" | "published"
   }
 
   export type contactMessage = {
+    id: string
     person: string
     email: string
     message: string
+    recievedAt: number
   }
+
+  export type fetchPort = {
+    get?: String,
+    post?: String,
+    delete?: String
+    getOne?: String
+  }
+
+  export type Status = "idle" | "loading" | "error" | "success" | "fetching" | "posting" | "deleting"
+  export type fetch = "get" | "getOne" | "post" | "delete"

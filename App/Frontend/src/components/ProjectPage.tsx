@@ -1,47 +1,56 @@
-import Line from "../assets/Line.png"
-import { Link } from "react-router-dom"
+import Line from "../assets/line.png"
+import { Link, redirect } from "react-router-dom"
 import { FaGithub } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-
 import { useEffect, useState } from 'react'
+import useProjects from "../hooks/useProjects";
+import LoadingProjectPage from "./LoadingProjectPage";
 
 export default function ProjectPage(){
     const { slug } = useParams()
+    const {data, status, getOne, remove} = useProjects()
+    const [deleteProject, setDeleteProject] = useState<boolean>(false)
+    const [deleteInput, setDeleteInput] = useState<string>()
+    const [errorMessage, setErrorMessage] = useState<string>()
 
-    const [project, setproject] = useState()
-
-    useEffect(() => {
-        const fetchJsonDataFromServer = async () => {
-            await fetch("http://localhost:3999/projects")
-            .then((response) => response.json())
-            .then((data) => {
-                for (let obj of data){
-                    if(obj.slug.includes(slug)){
-                        setproject(obj)
-                    }
-                }
-            })
-            .catch((error) => console.error("Data could not be found", error))
+    const handleDelete = (e) => {
+        e.preventDefault()
+        if (!deleteProject) {
+            setDeleteProject(true)
+        } else if (deleteProject && deleteInput=== data[0].header){
+            remove(data[0])
+            setDeleteProject(false)
+        } else {
+            setErrorMessage("Feil navn")
         }
-        fetchJsonDataFromServer()
-    },[slug])
+    }
+
+    const handleDeleteInputChange = (e) => {
+        e.preventDefault()
+        setDeleteInput(e.target.value)
+    }
 
     useEffect(() => {
-    },[project])
-
+        getOne(slug)
+    },[slug])
 
     return (
         <>
-            <section id="projectPage">
+        {
+            status.loading ? (
+                <LoadingProjectPage/>
+            ) :
+            (
+                <section id="projectPage">
                 <picture>
-                    <source media="(min-width:300px)" srcSet={project?.image}/>
-                    <img src={project?.image} alt={project?.imagealt} width="700" height=""></img>
+                    <source media="(min-width:300px)" srcSet={data[0]?.image}/>
+                    <img src={data[0]?.image} alt={data[0]?.imagealt} width="700" height=""></img>
                 </picture>
                 <article id="projectContent">
                     <div id="projectPageHeaderAndTags">
-                        <h1>{project?.header}</h1>
+                        <h1>{data[0]?.header}</h1>
                         <ul id="tags">
-                            {project?.tags.map(((tag, index) => {
+                            {data[0]?.tags.map(((tag, index) => {
                                 return <li key={"projectTags"+tag+index}>{tag}</li>
                             }))}
                         </ul>
@@ -51,11 +60,29 @@ export default function ProjectPage(){
                         <img src={Line} alt=""  width="130" height=""></img>
                     </picture>
 
-                    <Link to={project?.repository} id="repositoryButton"><FaGithub /> Visit repository</Link>
+                    <Link to={data[0]?.repository} id="repositoryButton"><FaGithub /> Visit repository</Link>
                     
-                    <p>{project?.article}</p>
+                    <p>{data[0]?.article}</p>
                 </article>
+                <form id="deleteProject" onSubmit={handleDelete}>
+                { deleteProject ? (
+                        <>
+                            <label htmlFor="deleteInput">Skriv navnet på artikkelen for å slette den</label>
+                            <input onChange={handleDeleteInputChange} type="text" id="deleteInput" name="deleteInput" placeholder="Navnet på artikkelen..."></input>
+                        </>
+                    )
+                        :
+                        (<></>)
+                    }
+                    <button type="submit">Delete project</button>
+                    {errorMessage ? (<p id="errorMessage">{errorMessage}</p>) : (<></>)}
+                </form>
+                
             </section>
-        </>
+        
+            )
+        }
+
+        </>    
     )
 }
